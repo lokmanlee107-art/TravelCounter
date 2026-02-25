@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🇭🇰 旅遊記帳 (含編輯與重置功能)</title>
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="🇭🇰 旅遊記帳">
+    <link rel="apple-touch-icon" href="app-icon.png"> <title>🇭🇰 旅遊記帳 (完整終極版)</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 480px; box-sizing: border-box; margin-top: 10px;}
@@ -17,7 +21,7 @@
         .btn-toggle { background: #95a5a6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-bottom: 10px; }
         .top-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
         
-        /* 輸入區塊增加過渡效果，編輯模式會變色 */
+        /* 編輯模式的視覺提示 */
         .input-group { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; transition: 0.3s; }
         .input-group.edit-mode { background: #fff3e0; border: 2px dashed #f39c12; }
 
@@ -36,7 +40,7 @@
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
         .hkd-amount { color: #d35400; font-weight: bold; font-size: 1.1rem; }
         
-        /* 新增：操作按鈕區塊 (編輯/刪除) */
+        /* 操作按鈕 (編輯/刪除) */
         .item-actions { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; margin-left: 10px; }
         .edit-btn { background: #f1c40f; color: #333; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .delete-btn { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
@@ -51,10 +55,11 @@
         .export-btn { flex: 1; padding: 12px; background-color: #8e44ad; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .settle-btn { flex: 1; padding: 12px; background-color: #e67e22; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
 
-        /* 新增：一鍵清空按鈕的樣式 */
+        /* 一鍵清空按鈕 */
         .clear-btn { width: 100%; padding: 12px; background-color: #c0392b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; margin-top: 10px; }
         .clear-btn:hover { background-color: #a53125; }
 
+        /* 人性化結算樣式 */
         #settlement-panel { background: #fff8e1; border: 2px solid #ffa000; }
         .debtor-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #e67e22; }
         .debtor-name { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
@@ -94,7 +99,6 @@
         <div id="settlement-results"></div>
     </div>
 
-    <!-- 加入 ID 以便 JS 控制樣式 -->
     <div class="input-group" id="input-group">
         <div class="row">
             <input type="text" id="item-name" placeholder="項目 (如：的士)">
@@ -127,7 +131,6 @@
         <button class="settle-btn" onclick="showSettlement()">💰 檢視結算</button>
     </div>
     
-    <!-- 新增：一鍵清空按鈕 -->
     <button class="clear-btn" onclick="clearAllExpenses()">🗑️ 一鍵清空 (開啟新旅程)</button>
 </div>
 
@@ -139,7 +142,6 @@
     let peopleList = JSON.parse(localStorage.getItem('travel_people_hk')) || ["我自己"];
     let expenses = JSON.parse(localStorage.getItem('travel_data_hk')) || [];
     
-    // 用來記錄目前是否正在編輯某筆資料
     let editingId = null;
 
     initRateSettings();
@@ -238,7 +240,6 @@
         });
     }
 
-    // --- 修改：新增/更新按鈕邏輯 ---
     document.getElementById('add-btn').addEventListener('click', () => {
         const name = document.getElementById('item-name').value.trim();
         const rawAmount = parseFloat(document.getElementById('item-amount').value);
@@ -262,19 +263,17 @@
         const hkdTotal = parseFloat((rawAmount * rate).toFixed(1)); 
         
         if (editingId) {
-            // 更新現有資料
             const index = expenses.findIndex(item => item.id === editingId);
             if (index !== -1) {
                 expenses[index] = {
-                    ...expenses[index], // 保留 id
+                    ...expenses[index],
                     name, curName, rawAmount, hkdTotal, payer,
                     peopleList: selectedPeople,
                     peopleCount: selectedPeople.length 
                 };
             }
-            cancelEditMode(); // 退出編輯模式
+            cancelEditMode();
         } else {
-            // 新增資料
             const entry = { 
                 id: Date.now(), 
                 name, curName, rawAmount, hkdTotal, payer, 
@@ -287,26 +286,21 @@
         localStorage.setItem('travel_data_hk', JSON.stringify(expenses));
         renderExpenses();
         
-        // 清空輸入框
         document.getElementById('item-name').value = '';
         document.getElementById('item-amount').value = '';
-        // 重置 Checkbox (預設全選)
         renderCheckboxes(); 
     });
 
-    // --- 新增：編輯功能 ---
     function editItem(id) {
         const item = expenses.find(i => i.id === id);
         if (!item) return;
 
         editingId = id; 
 
-        // 填入資料
         document.getElementById('item-name').value = item.name;
         document.getElementById('item-amount').value = item.rawAmount;
         document.getElementById('payer-select').value = item.payer;
 
-        // 設定下拉選單 (根據幣別名稱)
         const currencySelect = document.getElementById('currency-select');
         for (let i = 0; i < currencySelect.options.length; i++) {
             if (currencySelect.options[i].text.startsWith(item.curName)) {
@@ -315,19 +309,16 @@
             }
         }
 
-        // 設定 Checkbox
         const checkboxes = document.querySelectorAll('.person-cb');
         checkboxes.forEach(cb => {
             cb.checked = item.peopleList.includes(cb.value);
         });
 
-        // 改變介面狀態
         const btn = document.getElementById('add-btn');
         btn.innerText = "💾 更新紀錄";
         btn.style.backgroundColor = "#f39c12"; 
         document.getElementById('input-group').classList.add('edit-mode');
 
-        // 滾動到頂部
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
@@ -344,12 +335,9 @@
         expenses = expenses.filter(i => i.id !== id);
         localStorage.setItem('travel_data_hk', JSON.stringify(expenses));
         renderExpenses();
-        
-        // 如果正在編輯這筆資料，刪除後要退出編輯模式
         if (editingId === id) cancelEditMode();
     }
 
-    // --- 新增：一鍵清空邏輯 ---
     function clearAllExpenses() {
         if (expenses.length === 0) {
             alert("目前沒有任何紀錄喔！");
@@ -359,17 +347,11 @@
         const warningMessage = "⚠️ 警告：確定要清空所有紀錄嗎？\n\n強烈建議您在清空前先點擊「📊 匯出 CSV」備份。\n點擊「確定」將會刪除所有帳目且無法復原！";
         
         if (confirm(warningMessage)) {
-            // 清空陣列
             expenses = [];
-            // 清除 localStorage 裡的儲存資料
             localStorage.removeItem('travel_data_hk');
-            
-            // 隱藏結算面板（如果開著的話）
             document.getElementById('settlement-panel').style.display = 'none';
-            
-            // 重新繪製畫面
             renderExpenses();
-            cancelEditMode(); // 確保退出編輯模式
+            cancelEditMode(); 
             alert("紀錄已清空，祝您下一趟旅程愉快！✈️");
         }
     }
