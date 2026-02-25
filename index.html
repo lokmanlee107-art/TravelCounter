@@ -3,13 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="🇭🇰 旅遊記帳">
-    
-    <link rel="apple-touch-icon" href="app-icon.png">
-    <title>旅遊分單與匯率設定 (自動結算版)</title>
+    <title>🇭🇰 旅遊記帳 (含編輯與重置功能)</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 480px; box-sizing: border-box; margin-top: 10px;}
@@ -23,7 +17,10 @@
         .btn-toggle { background: #95a5a6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-bottom: 10px; }
         .top-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
         
-        .input-group { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; }
+        /* 輸入區塊增加過渡效果，編輯模式會變色 */
+        .input-group { background: #e3f2fd; padding: 15px; border-radius: 10px; margin-bottom: 20px; transition: 0.3s; }
+        .input-group.edit-mode { background: #fff3e0; border: 2px dashed #f39c12; }
+
         input[type="text"], input[type="number"], select { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; width: 100%; box-sizing: border-box; }
         .row { display: flex; gap: 10px; margin-bottom: 10px; }
         .row > * { flex: 1; }
@@ -34,11 +31,16 @@
         .person-tag { display: inline-flex; align-items: center; background: #e0e0e0; padding: 5px 10px; border-radius: 15px; font-size: 13px; margin: 5px; }
         .person-tag button { background: none; border: none; color: #e74c3c; margin-left: 5px; cursor: pointer; font-weight: bold; }
 
-        button.primary-btn { width: 100%; padding: 12px; background-color: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; }
+        button.primary-btn { width: 100%; padding: 12px; background-color: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
         
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
         .hkd-amount { color: #d35400; font-weight: bold; font-size: 1.1rem; }
-        .delete-btn { background: #ff7675; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; margin-left: 10px; }
+        
+        /* 新增：操作按鈕區塊 (編輯/刪除) */
+        .item-actions { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; margin-left: 10px; }
+        .edit-btn { background: #f1c40f; color: #333; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .delete-btn { background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        
         .people-list { font-size: 0.8rem; color: #3498db; margin-top: 3px; }
         .payer-badge { font-size: 0.75rem; background: #f39c12; color: white; padding: 2px 6px; border-radius: 4px; margin-bottom: 4px; display: inline-block; }
         
@@ -49,9 +51,17 @@
         .export-btn { flex: 1; padding: 12px; background-color: #8e44ad; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
         .settle-btn { flex: 1; padding: 12px; background-color: #e67e22; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
 
-        #settlement-panel { background: #fff3e0; border: 2px solid #e67e22; }
-        .transfer-item { font-size: 1.1rem; padding: 10px 0; border-bottom: 1px dashed #ccc; color: #d35400; font-weight: bold; display: flex; align-items: center; gap: 8px;}
-        .transfer-item:last-child { border-bottom: none; }
+        /* 新增：一鍵清空按鈕的樣式 */
+        .clear-btn { width: 100%; padding: 12px; background-color: #c0392b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; margin-top: 10px; }
+        .clear-btn:hover { background-color: #a53125; }
+
+        #settlement-panel { background: #fff8e1; border: 2px solid #ffa000; }
+        .debtor-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border-left: 5px solid #e67e22; }
+        .debtor-name { font-size: 1.1rem; font-weight: bold; color: #333; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+        .debt-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .creditor-info { font-size: 1rem; color: #555; font-weight: bold; }
+        .debt-amount { color: #d35400; font-weight: bold; font-size: 1.1rem; }
+        .debt-reason { font-size: 0.8rem; color: #888; display: block; margin-top: 2px; line-height: 1.2; }
     </style>
 </head>
 <body>
@@ -80,11 +90,12 @@
     </div>
 
     <div id="settlement-panel" class="panel">
-        <h4>💰 最終結算清單</h4>
+        <h4 style="text-align:center; color:#d35400;">💰 結算清單 (誰該給誰)</h4>
         <div id="settlement-results"></div>
     </div>
 
-    <div class="input-group">
+    <!-- 加入 ID 以便 JS 控制樣式 -->
+    <div class="input-group" id="input-group">
         <div class="row">
             <input type="text" id="item-name" placeholder="項目 (如：的士)">
         </div>
@@ -115,6 +126,9 @@
         <button class="export-btn" onclick="exportToCSV()">📊 匯出 CSV</button>
         <button class="settle-btn" onclick="showSettlement()">💰 檢視結算</button>
     </div>
+    
+    <!-- 新增：一鍵清空按鈕 -->
+    <button class="clear-btn" onclick="clearAllExpenses()">🗑️ 一鍵清空 (開啟新旅程)</button>
 </div>
 
 <script>
@@ -124,6 +138,9 @@
     
     let peopleList = JSON.parse(localStorage.getItem('travel_people_hk')) || ["我自己"];
     let expenses = JSON.parse(localStorage.getItem('travel_data_hk')) || [];
+    
+    // 用來記錄目前是否正在編輯某筆資料
+    let editingId = null;
 
     initRateSettings();
     updateCurrencyDropdown();
@@ -189,6 +206,7 @@
     }
 
     function deletePerson(name) {
+        if (!confirm(`確定要刪除 ${name} 嗎？這不會刪除已記的帳，但可能會影響顯示。`)) return;
         peopleList = peopleList.filter(p => p !== name);
         savePeopleData();
     }
@@ -220,6 +238,7 @@
         });
     }
 
+    // --- 修改：新增/更新按鈕邏輯 ---
     document.getElementById('add-btn').addEventListener('click', () => {
         const name = document.getElementById('item-name').value.trim();
         const rawAmount = parseFloat(document.getElementById('item-amount').value);
@@ -242,29 +261,117 @@
 
         const hkdTotal = parseFloat((rawAmount * rate).toFixed(1)); 
         
-        const entry = { 
-            id: Date.now(), 
-            name, 
-            curName, 
-            rawAmount, 
-            hkdTotal, 
-            payer, 
-            peopleList: selectedPeople,
-            peopleCount: selectedPeople.length 
-        };
+        if (editingId) {
+            // 更新現有資料
+            const index = expenses.findIndex(item => item.id === editingId);
+            if (index !== -1) {
+                expenses[index] = {
+                    ...expenses[index], // 保留 id
+                    name, curName, rawAmount, hkdTotal, payer,
+                    peopleList: selectedPeople,
+                    peopleCount: selectedPeople.length 
+                };
+            }
+            cancelEditMode(); // 退出編輯模式
+        } else {
+            // 新增資料
+            const entry = { 
+                id: Date.now(), 
+                name, curName, rawAmount, hkdTotal, payer, 
+                peopleList: selectedPeople,
+                peopleCount: selectedPeople.length 
+            };
+            expenses.push(entry);
+        }
         
-        expenses.push(entry);
         localStorage.setItem('travel_data_hk', JSON.stringify(expenses));
         renderExpenses();
         
+        // 清空輸入框
         document.getElementById('item-name').value = '';
         document.getElementById('item-amount').value = '';
+        // 重置 Checkbox (預設全選)
+        renderCheckboxes(); 
     });
 
+    // --- 新增：編輯功能 ---
+    function editItem(id) {
+        const item = expenses.find(i => i.id === id);
+        if (!item) return;
+
+        editingId = id; 
+
+        // 填入資料
+        document.getElementById('item-name').value = item.name;
+        document.getElementById('item-amount').value = item.rawAmount;
+        document.getElementById('payer-select').value = item.payer;
+
+        // 設定下拉選單 (根據幣別名稱)
+        const currencySelect = document.getElementById('currency-select');
+        for (let i = 0; i < currencySelect.options.length; i++) {
+            if (currencySelect.options[i].text.startsWith(item.curName)) {
+                currencySelect.selectedIndex = i;
+                break;
+            }
+        }
+
+        // 設定 Checkbox
+        const checkboxes = document.querySelectorAll('.person-cb');
+        checkboxes.forEach(cb => {
+            cb.checked = item.peopleList.includes(cb.value);
+        });
+
+        // 改變介面狀態
+        const btn = document.getElementById('add-btn');
+        btn.innerText = "💾 更新紀錄";
+        btn.style.backgroundColor = "#f39c12"; 
+        document.getElementById('input-group').classList.add('edit-mode');
+
+        // 滾動到頂部
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function cancelEditMode() {
+        editingId = null;
+        const btn = document.getElementById('add-btn');
+        btn.innerText = "新增紀錄";
+        btn.style.backgroundColor = "#2ecc71"; 
+        document.getElementById('input-group').classList.remove('edit-mode');
+    }
+
     function deleteItem(id) {
+        if(!confirm("確定刪除這筆紀錄？")) return;
         expenses = expenses.filter(i => i.id !== id);
         localStorage.setItem('travel_data_hk', JSON.stringify(expenses));
         renderExpenses();
+        
+        // 如果正在編輯這筆資料，刪除後要退出編輯模式
+        if (editingId === id) cancelEditMode();
+    }
+
+    // --- 新增：一鍵清空邏輯 ---
+    function clearAllExpenses() {
+        if (expenses.length === 0) {
+            alert("目前沒有任何紀錄喔！");
+            return;
+        }
+        
+        const warningMessage = "⚠️ 警告：確定要清空所有紀錄嗎？\n\n強烈建議您在清空前先點擊「📊 匯出 CSV」備份。\n點擊「確定」將會刪除所有帳目且無法復原！";
+        
+        if (confirm(warningMessage)) {
+            // 清空陣列
+            expenses = [];
+            // 清除 localStorage 裡的儲存資料
+            localStorage.removeItem('travel_data_hk');
+            
+            // 隱藏結算面板（如果開著的話）
+            document.getElementById('settlement-panel').style.display = 'none';
+            
+            // 重新繪製畫面
+            renderExpenses();
+            cancelEditMode(); // 確保退出編輯模式
+            alert("紀錄已清空，祝您下一趟旅程愉快！✈️");
+        }
     }
 
     function renderExpenses() {
@@ -272,7 +379,7 @@
         list.innerHTML = '';
         let totalHKD = 0;
         
-        expenses.forEach(item => {
+        [...expenses].reverse().forEach(item => {
             totalHKD += item.hkdTotal;
             const perPerson = (item.hkdTotal / item.peopleCount).toFixed(1);
             const peopleStr = item.peopleList.join(', ');
@@ -281,15 +388,18 @@
                 <div class="item">
                     <div style="flex:1;">
                         <div class="payer-badge">💳 ${item.payer} 先付</div>
-                        <div class="item-name">${item.name}</div>
-                        <small>${item.rawAmount} ${item.curName}</small>
+                        <div class="item-name" style="font-weight:bold; color:#333;">${item.name}</div>
+                        <small style="color:#777;">${item.rawAmount} ${item.curName}</small>
                         <div class="people-list">🙋‍♂️ 分攤: ${peopleStr}</div>
                     </div>
                     <div style="text-align:right">
                         <span class="hkd-amount">HK$ ${item.hkdTotal}</span><br>
                         <small>每人 HK$ ${perPerson}</small>
                     </div>
-                    <button class="delete-btn" onclick="deleteItem(${item.id})">刪除</button>
+                    <div class="item-actions">
+                        <button class="edit-btn" onclick="editItem(${item.id})">✏️</button>
+                        <button class="delete-btn" onclick="deleteItem(${item.id})">✖️</button>
+                    </div>
                 </div>
             `;
         });
@@ -299,64 +409,97 @@
 
     function showSettlement() {
         if (expenses.length === 0) {
-            alert("還沒有記帳紀錄喔！");
-            return;
+            alert("還沒有記帳紀錄喔！"); return;
         }
 
-        let balances = {};
-        expenses.forEach(exp => {
-            if (balances[exp.payer] === undefined) balances[exp.payer] = 0;
-            exp.peopleList.forEach(p => {
-                if (balances[p] === undefined) balances[p] = 0;
+        let pairwiseDebts = {};
+        let debtDetails = {}; 
+
+        let allInvolvedPeople = new Set(peopleList);
+        expenses.forEach(e => {
+            allInvolvedPeople.add(e.payer);
+            e.peopleList.forEach(p => allInvolvedPeople.add(p));
+        });
+        let uniquePeople = Array.from(allInvolvedPeople);
+
+        uniquePeople.forEach(p => {
+            pairwiseDebts[p] = {};
+            debtDetails[p] = {};
+            uniquePeople.forEach(p2 => {
+                if (p !== p2) {
+                    pairwiseDebts[p][p2] = 0;
+                    debtDetails[p][p2] = [];
+                }
             });
         });
 
         expenses.forEach(exp => {
             const splitAmount = exp.hkdTotal / exp.peopleCount;
-            balances[exp.payer] += exp.hkdTotal;
-            exp.peopleList.forEach(p => {
-                balances[p] -= splitAmount;
+            const payer = exp.payer;
+            
+            exp.peopleList.forEach(person => {
+                if (person !== payer) {
+                    pairwiseDebts[person][payer] += splitAmount;
+                    debtDetails[person][payer].push(exp.name);
+                }
             });
         });
 
-        let debtors = [];
-        let creditors = [];
-        for (let person in balances) {
-            let bal = parseFloat(balances[person].toFixed(2)); 
-            if (bal < -0.05) debtors.push({ name: person, amount: Math.abs(bal) });
-            else if (bal > 0.05) creditors.push({ name: person, amount: bal });
-        }
+        let finalDebts = {}; 
+        let processedPairs = new Set();
 
-        let transfers = [];
-        let i = 0; 
-        let j = 0; 
+        uniquePeople.forEach(p1 => {
+            uniquePeople.forEach(p2 => {
+                if (p1 === p2) return;
+                
+                let pairKey = [p1, p2].sort().join('-');
+                if (processedPairs.has(pairKey)) return;
+                processedPairs.add(pairKey);
 
-        while (i < debtors.length && j < creditors.length) {
-            let debtor = debtors[i];
-            let creditor = creditors[j];
-            
-            let minAmount = Math.min(debtor.amount, creditor.amount);
-            
-            transfers.push(`
-                <div class="transfer-item">
-                    <span>${debtor.name}</span>
-                    <span>➡️ 轉給 ➡️</span>
-                    <span>${creditor.name} : HK$ ${minAmount.toFixed(1)}</span>
-                </div>
-            `);
+                let p1OwesP2 = pairwiseDebts[p1][p2];
+                let p2OwesP1 = pairwiseDebts[p2][p1];
+                let net = p1OwesP2 - p2OwesP1;
+                
+                let allReasons = [...debtDetails[p1][p2], ...debtDetails[p2][p1]];
+                let uniqueReasons = [...new Set(allReasons)].slice(0, 5).join(", ");
+                if (allReasons.length > 5) uniqueReasons += "...等";
 
-            debtor.amount -= minAmount;
-            creditor.amount -= minAmount;
-
-            if (debtor.amount < 0.05) i++;
-            if (creditor.amount < 0.05) j++;
-        }
+                if (net > 0.5) {
+                    if (!finalDebts[p1]) finalDebts[p1] = [];
+                    finalDebts[p1].push({ creditor: p2, amount: net, reasons: uniqueReasons });
+                } else if (net < -0.5) {
+                    if (!finalDebts[p2]) finalDebts[p2] = [];
+                    finalDebts[p2].push({ creditor: p1, amount: Math.abs(net), reasons: uniqueReasons });
+                }
+            });
+        });
 
         const resultsContainer = document.getElementById('settlement-results');
-        if (transfers.length === 0) {
-            resultsContainer.innerHTML = "<p style='color:#27ae60; font-weight:bold;'>🎉 太完美了！大家互不相欠！</p>";
+        resultsContainer.innerHTML = '';
+
+        if (Object.keys(finalDebts).length === 0) {
+            resultsContainer.innerHTML = "<p style='text-align:center; color:#27ae60; font-weight:bold; padding:20px;'>🎉 完美！大家互不相欠！</p>";
         } else {
-            resultsContainer.innerHTML = transfers.join('');
+            for (let debtor in finalDebts) {
+                let debtList = finalDebts[debtor];
+                let cardHtml = `<div class="debtor-card">
+                    <div class="debtor-name">👤 ${debtor} 需要支付：</div>`;
+                
+                debtList.forEach(d => {
+                    cardHtml += `
+                        <div class="debt-row">
+                            <div class="creditor-info">
+                                ➡️ 給 ${d.creditor}
+                                <span class="debt-reason">(${d.reasons || '雜項'})</span>
+                            </div>
+                            <div class="debt-amount">HK$ ${d.amount.toFixed(1)}</div>
+                        </div>
+                    `;
+                });
+                
+                cardHtml += `</div>`;
+                resultsContainer.innerHTML += cardHtml;
+            }
         }
 
         togglePanel('settlement-panel');
