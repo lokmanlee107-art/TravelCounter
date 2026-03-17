@@ -10,7 +10,15 @@
     <link rel="apple-touch-icon" href="app-icon.png"> <title>🇭🇰 旅遊記帳 (完整終極版)</title>
     <style>
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 480px; box-sizing: border-box; margin-top: 10px;}
+        .container { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 520px; box-sizing: border-box; margin-top: 10px;}
+        .hero { background: linear-gradient(135deg, #1f6feb, #3b82f6); color: white; padding: 16px; border-radius: 12px; margin-bottom: 14px; }
+        .hero h2 { margin: 0 0 6px; font-size: 1.35rem; }
+        .hero p { margin: 0; font-size: 0.9rem; opacity: 0.95; }
+        .overview { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 12px 0 16px; }
+        .overview-card { background: #f7f9fc; border: 1px solid #d9e2ec; border-radius: 10px; padding: 10px 12px; }
+        .overview-card .label { color: #5b6b7a; font-size: 0.78rem; }
+        .overview-card .value { color: #1f2d3d; font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
+        .section-title { font-size: 0.9rem; font-weight: 700; color: #334155; margin: 10px 0 8px; }
         
         .panel { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; }
         .panel h4 { margin-top: 0; color: #555; margin-bottom: 10px; }
@@ -18,7 +26,7 @@
         .rate-input { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 14px; }
         .rate-input input { width: 80px; padding: 5px; }
 
-        .btn-toggle { background: #95a5a6; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-size: 13px; margin-bottom: 10px; }
+        .btn-toggle { background: #64748b; color: white; border: none; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; margin-bottom: 10px; font-weight: 600; }
         .top-buttons { display: flex; gap: 10px; margin-bottom: 10px; }
         
         /* 編輯模式的視覺提示 */
@@ -38,6 +46,7 @@
         button.primary-btn { width: 100%; padding: 12px; background-color: #2ecc71; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
         
         .item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .empty-state { text-align: center; color: #64748b; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 18px 10px; margin-top: 8px; font-size: 0.92rem; }
         .hkd-amount { color: #d35400; font-weight: bold; font-size: 1.1rem; }
         
         /* 操作按鈕 (編輯/刪除) */
@@ -51,9 +60,11 @@
         .total-section { margin-top: 20px; padding: 15px; background: #34495e; color: white; border-radius: 10px; text-align: center; }
         .total-amount { font-size: 1.8rem; font-weight: bold; color: #f1c40f; }
 
-        .action-buttons { display: flex; gap: 10px; margin-top: 15px; }
-        .export-btn { flex: 1; padding: 12px; background-color: #8e44ad; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
-        .settle-btn { flex: 1; padding: 12px; background-color: #e67e22; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .action-buttons { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .export-btn { flex: 1 1 45%; padding: 12px; background-color: #8e44ad; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .excel-btn { flex: 1 1 45%; padding: 12px; background-color: #0f766e; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .png-btn { flex: 1 1 45%; padding: 12px; background-color: #2563eb; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
+        .settle-btn { flex: 1 1 45%; padding: 12px; background-color: #e67e22; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; }
 
         /* 一鍵清空按鈕 */
         .clear-btn { width: 100%; padding: 12px; background-color: #c0392b; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; margin-top: 10px; }
@@ -72,7 +83,21 @@
 <body>
 
 <div class="container">
-    <h2>🇭🇰 旅遊分單記帳本</h2>
+    <div class="hero">
+        <h2>🇭🇰 旅遊分單記帳本</h2>
+        <p>三步完成：新增旅伴 → 記帳 → 檢視結算，介面更直觀易明。</p>
+    </div>
+    
+    <div class="overview">
+        <div class="overview-card">
+            <div class="label">目前旅伴人數</div>
+            <div class="value" id="overview-people">0 人</div>
+        </div>
+        <div class="overview-card">
+            <div class="label">已記錄項目數</div>
+            <div class="value" id="overview-expenses">0 筆</div>
+        </div>
+    </div>
     
     <div class="top-buttons">
         <button class="btn-toggle" onclick="togglePanel('settings')">⚙️ 匯率設定</button>
@@ -99,6 +124,7 @@
         <div id="settlement-results"></div>
     </div>
 
+    <div class="section-title">🧾 Step 1：新增一筆消費</div>
     <div class="input-group" id="input-group">
         <div class="row">
             <input type="text" id="item-name" placeholder="項目 (如：的士)">
@@ -119,6 +145,7 @@
         <button id="add-btn" class="primary-btn">新增紀錄</button>
     </div>
 
+    <div class="section-title">📚 Step 2：消費紀錄列表</div>
     <div id="expense-list"></div>
 
     <div class="total-section">
@@ -128,6 +155,8 @@
 
     <div class="action-buttons">
         <button class="export-btn" onclick="exportToCSV()">📊 匯出 CSV</button>
+        <button class="excel-btn" onclick="exportDetailedExcel()">📗 匯出詳細 Excel</button>
+        <button class="png-btn" onclick="exportSimplePNG()">🖼️ 匯出簡單 PNG</button>
         <button class="settle-btn" onclick="showSettlement()">💰 檢視結算</button>
     </div>
     
@@ -150,6 +179,12 @@
     updatePayerDropdown(); 
     renderCheckboxes();
     renderExpenses();
+    updateOverview();
+
+    function updateOverview() {
+        document.getElementById('overview-people').innerText = `${peopleList.length} 人`;
+        document.getElementById('overview-expenses').innerText = `${expenses.length} 筆`;
+    }
 
     function togglePanel(panelId) {
         document.getElementById('settings').style.display = 'none';
@@ -183,16 +218,28 @@
         const select = document.getElementById('currency-select');
         select.innerHTML = '';
         for (let cur in rates) {
-            select.innerHTML += `<option value="${rates[cur]}">${cur} (匯率:${rates[cur]})</option>`;
+            const option = document.createElement('option');
+            option.value = rates[cur];
+            option.textContent = `${cur} (匯率:${rates[cur]})`;
+            select.appendChild(option);
         }
     }
 
     function updatePayerDropdown() {
         const select = document.getElementById('payer-select');
+        const previousValue = select.value;
         select.innerHTML = '';
+
         peopleList.forEach(name => {
-            select.innerHTML += `<option value="${name}">${name}</option>`;
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
         });
+
+        if (peopleList.includes(previousValue)) {
+            select.value = previousValue;
+        }
     }
 
     function addPerson() {
@@ -218,14 +265,34 @@
         renderPeoplePanel();
         renderCheckboxes();
         updatePayerDropdown(); 
+        updateOverview();
     }
 
     function renderPeoplePanel() {
         const container = document.getElementById('people-tags-container');
         container.innerHTML = '';
         peopleList.forEach(name => {
-            container.innerHTML += `<div class="person-tag">${name} <button onclick="deletePerson('${name}')">x</button></div>`;
+            const tag = document.createElement('div');
+            tag.className = 'person-tag';
+
+            const nameText = document.createTextNode(name + ' ');
+            const deleteBtn = document.createElement('button');
+            deleteBtn.textContent = 'x';
+            deleteBtn.addEventListener('click', () => deletePerson(name));
+
+            tag.appendChild(nameText);
+            tag.appendChild(deleteBtn);
+            container.appendChild(tag);
         });
+    }
+
+    function escapeHTML(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
 
     function renderCheckboxes() {
@@ -235,8 +302,18 @@
             container.innerHTML = '<span style="color:#e74c3c; font-size:14px;">請先新增人員！</span>';
             return;
         }
+
         peopleList.forEach(name => {
-            container.innerHTML += `<label><input type="checkbox" class="person-cb" value="${name}" checked> ${name}</label>`;
+            const label = document.createElement('label');
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'person-cb';
+            checkbox.value = name;
+            checkbox.checked = true;
+
+            label.appendChild(checkbox);
+            label.appendChild(document.createTextNode(` ${name}`));
+            container.appendChild(label);
         });
     }
 
@@ -360,18 +437,28 @@
         const list = document.getElementById('expense-list');
         list.innerHTML = '';
         let totalHKD = 0;
+
+        if (expenses.length === 0) {
+            list.innerHTML = `<div class="empty-state">目前尚未有消費記錄，請先在上方新增第一筆 ✍️</div>`;
+            document.getElementById('total-sum').innerText = "0.0";
+            updateOverview();
+            return;
+        }
         
         [...expenses].reverse().forEach(item => {
             totalHKD += item.hkdTotal;
             const perPerson = (item.hkdTotal / item.peopleCount).toFixed(1);
-            const peopleStr = item.peopleList.join(', ');
+            const peopleStr = escapeHTML(item.peopleList.join(', '));
+            const safePayer = escapeHTML(item.payer);
+            const safeName = escapeHTML(item.name);
+            const safeCurName = escapeHTML(item.curName);
 
             list.innerHTML += `
                 <div class="item">
                     <div style="flex:1;">
-                        <div class="payer-badge">💳 ${item.payer} 先付</div>
-                        <div class="item-name" style="font-weight:bold; color:#333;">${item.name}</div>
-                        <small style="color:#777;">${item.rawAmount} ${item.curName}</small>
+                        <div class="payer-badge">💳 ${safePayer} 先付</div>
+                        <div class="item-name" style="font-weight:bold; color:#333;">${safeName}</div>
+                        <small style="color:#777;">${item.rawAmount} ${safeCurName}</small>
                         <div class="people-list">🙋‍♂️ 分攤: ${peopleStr}</div>
                     </div>
                     <div style="text-align:right">
@@ -387,6 +474,7 @@
         });
         
         document.getElementById('total-sum').innerText = totalHKD.toFixed(1);
+        updateOverview();
     }
 
     function showSettlement() {
@@ -464,15 +552,18 @@
         } else {
             for (let debtor in finalDebts) {
                 let debtList = finalDebts[debtor];
+                const safeDebtor = escapeHTML(debtor);
                 let cardHtml = `<div class="debtor-card">
-                    <div class="debtor-name">👤 ${debtor} 需要支付：</div>`;
+                    <div class="debtor-name">👤 ${safeDebtor} 需要支付：</div>`;
                 
                 debtList.forEach(d => {
+                    const safeCreditor = escapeHTML(d.creditor);
+                    const safeReasons = escapeHTML(d.reasons || '雜項');
                     cardHtml += `
                         <div class="debt-row">
                             <div class="creditor-info">
-                                ➡️ 給 ${d.creditor}
-                                <span class="debt-reason">(${d.reasons || '雜項'})</span>
+                                ➡️ 給 ${safeCreditor}
+                                <span class="debt-reason">(${safeReasons})</span>
                             </div>
                             <div class="debt-amount">HK$ ${d.amount.toFixed(1)}</div>
                         </div>
@@ -486,6 +577,136 @@
 
         togglePanel('settlement-panel');
         document.getElementById('settlement-panel').scrollIntoView({ behavior: 'smooth' });
+    }
+
+
+
+    function downloadBlob(blob, fileName) {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    function exportDetailedExcel() {
+        if (expenses.length === 0) {
+            alert("目前沒有任何紀錄可以匯出喔！"); return;
+        }
+
+        const escapeXml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+
+        const rows = expenses.map((item, idx) => {
+            const perPerson = (item.hkdTotal / item.peopleCount).toFixed(1);
+            const people = item.peopleList.join(', ');
+            return `
+            <Row>
+                <Cell><Data ss:Type="Number">${idx + 1}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(item.name)}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(item.curName)}</Data></Cell>
+                <Cell><Data ss:Type="Number">${item.rawAmount}</Data></Cell>
+                <Cell><Data ss:Type="Number">${item.hkdTotal}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(item.payer)}</Data></Cell>
+                <Cell><Data ss:Type="Number">${item.peopleCount}</Data></Cell>
+                <Cell><Data ss:Type="String">${escapeXml(people)}</Data></Cell>
+                <Cell><Data ss:Type="Number">${perPerson}</Data></Cell>
+            </Row>`;
+        }).join('');
+
+        const total = expenses.reduce((sum, item) => sum + item.hkdTotal, 0).toFixed(1);
+
+        const workbookXml = `<?xml version="1.0"?>
+        <?mso-application progid="Excel.Sheet"?>
+        <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+            xmlns:o="urn:schemas-microsoft-com:office:office"
+            xmlns:x="urn:schemas-microsoft-com:office:excel"
+            xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+            <Worksheet ss:Name="旅遊記帳明細">
+                <Table>
+                    <Row>
+                        <Cell><Data ss:Type="String">序號</Data></Cell>
+                        <Cell><Data ss:Type="String">項目名稱</Data></Cell>
+                        <Cell><Data ss:Type="String">幣別</Data></Cell>
+                        <Cell><Data ss:Type="String">外幣金額</Data></Cell>
+                        <Cell><Data ss:Type="String">港幣總計</Data></Cell>
+                        <Cell><Data ss:Type="String">付款人</Data></Cell>
+                        <Cell><Data ss:Type="String">分攤人數</Data></Cell>
+                        <Cell><Data ss:Type="String">參與人員</Data></Cell>
+                        <Cell><Data ss:Type="String">每人分攤港幣</Data></Cell>
+                    </Row>
+                    ${rows}
+                    <Row>
+                        <Cell><Data ss:Type="String">總支出(HKD)</Data></Cell>
+                        <Cell/><Cell/><Cell/>
+                        <Cell><Data ss:Type="Number">${total}</Data></Cell>
+                        <Cell/><Cell/><Cell/><Cell/>
+                    </Row>
+                </Table>
+            </Worksheet>
+        </Workbook>`;
+
+        const blob = new Blob([workbookXml], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+        downloadBlob(blob, 'HK_travel_expenses_detailed.xls');
+    }
+
+    function exportSimplePNG() {
+        if (expenses.length === 0) {
+            alert("目前沒有任何紀錄可以匯出喔！"); return;
+        }
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const width = 900;
+        const rowHeight = 44;
+        const maxRows = 12;
+        const shown = expenses.slice(-maxRows).reverse();
+        const total = expenses.reduce((sum, item) => sum + item.hkdTotal, 0).toFixed(1);
+        const height = 220 + shown.length * rowHeight;
+
+        canvas.width = width;
+        canvas.height = height;
+
+        ctx.fillStyle = '#f1f5f9';
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#1d4ed8';
+        ctx.fillRect(0, 0, width, 92);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 34px "Microsoft JhengHei"';
+        ctx.fillText('旅遊記帳簡報', 34, 50);
+        ctx.font = '22px "Microsoft JhengHei"';
+        ctx.fillText(`總支出 HK$ ${total} ｜ 共 ${expenses.length} 筆`, 34, 80);
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 24px "Microsoft JhengHei"';
+        ctx.fillText('最近記錄', 34, 130);
+
+        ctx.font = '20px "Microsoft JhengHei"';
+        shown.forEach((item, i) => {
+            const y = 170 + i * rowHeight;
+            ctx.fillStyle = i % 2 === 0 ? '#ffffff' : '#f8fafc';
+            ctx.fillRect(28, y - 28, width - 56, 36);
+            ctx.fillStyle = '#334155';
+            const line = `${item.name}｜${item.payer} 先付｜HK$ ${item.hkdTotal}`;
+            ctx.fillText(line.slice(0, 58), 40, y);
+        });
+
+        canvas.toBlob((blob) => {
+            if (!blob) {
+                alert('PNG 匯出失敗，請稍後再試。');
+                return;
+            }
+            downloadBlob(blob, 'HK_travel_summary.png');
+        }, 'image/png');
     }
 
     function exportToCSV() {
@@ -505,14 +726,7 @@
         });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", "HK_travel_expenses.csv"); 
-        
-        document.body.appendChild(link);
-        link.click(); 
-        document.body.removeChild(link); 
+        downloadBlob(blob, "HK_travel_expenses.csv"); 
     }
 </script>
 
