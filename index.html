@@ -19,6 +19,13 @@
         .overview-card .label { color: #5b6b7a; font-size: 0.78rem; }
         .overview-card .value { color: #1f2d3d; font-size: 1.1rem; font-weight: 700; margin-top: 2px; }
         .section-title { font-size: 0.9rem; font-weight: 700; color: #334155; margin: 10px 0 8px; }
+        .filter-bar { background: #f8fafc; border: 1px solid #dbe5f0; border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+        .filter-grid { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 8px; }
+        .filter-control { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-bottom: 10px; }
+        .stat-card { background: #f8fafc; border: 1px solid #dbe5f0; border-radius: 10px; padding: 10px; }
+        .stat-card .k { color: #64748b; font-size: 0.78rem; }
+        .stat-card .v { color: #0f172a; font-size: 1rem; font-weight: 700; margin-top: 2px; }
         
         .panel { background: #f8f9fa; border: 1px solid #ddd; padding: 15px; border-radius: 10px; margin-bottom: 20px; display: none; }
         .panel h4 { margin-top: 0; color: #555; margin-bottom: 10px; }
@@ -146,6 +153,20 @@
     </div>
 
     <div class="section-title">📚 Step 2：消費紀錄列表</div>
+    <div class="filter-bar">
+        <div class="filter-grid">
+            <input id="search-keyword" class="filter-control" type="text" placeholder="搜尋項目/分攤人...">
+            <select id="filter-payer" class="filter-control">
+                <option value="">全部付款人</option>
+            </select>
+            <select id="sort-mode" class="filter-control">
+                <option value="latest">最新優先</option>
+                <option value="amount_desc">金額高→低</option>
+                <option value="amount_asc">金額低→高</option>
+            </select>
+        </div>
+    </div>
+    <div id="stats-panel" class="stats-grid"></div>
     <div id="expense-list"></div>
 
     <div class="total-section">
@@ -177,9 +198,29 @@
     updateCurrencyDropdown();
     renderPeoplePanel();
     updatePayerDropdown(); 
+    updateFilterPayerOptions();
     renderCheckboxes();
+    migrateLegacyData();
     renderExpenses();
     updateOverview();
+
+    document.getElementById('search-keyword').addEventListener('input', renderExpenses);
+    document.getElementById('filter-payer').addEventListener('change', renderExpenses);
+    document.getElementById('sort-mode').addEventListener('change', renderExpenses);
+
+    function migrateLegacyData() {
+        let changed = false;
+        expenses = expenses.map(item => {
+            if (!item.createdAt) {
+                changed = true;
+                return { ...item, createdAt: item.id || Date.now() };
+            }
+            return item;
+        });
+        if (changed) {
+            localStorage.setItem('travel_data_hk', JSON.stringify(expenses));
+        }
+    }
 
     function updateOverview() {
         document.getElementById('overview-people').innerText = `${peopleList.length} 人`;
@@ -242,6 +283,21 @@
         }
     }
 
+    function updateFilterPayerOptions() {
+        const select = document.getElementById('filter-payer');
+        const previous = select.value;
+        select.innerHTML = '<option value="">全部付款人</option>';
+        peopleList.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+        });
+        if (peopleList.includes(previous)) {
+            select.value = previous;
+        }
+    }
+
     function addPerson() {
         const nameInput = document.getElementById('new-person-name');
         const name = nameInput.value.trim();
@@ -265,6 +321,7 @@
         renderPeoplePanel();
         renderCheckboxes();
         updatePayerDropdown(); 
+        updateFilterPayerOptions();
         updateOverview();
     }
 
@@ -345,6 +402,7 @@
                 expenses[index] = {
                     ...expenses[index],
                     name, curName, rawAmount, hkdTotal, payer,
+                    createdAt: expenses[index].createdAt || expenses[index].id || Date.now(),
                     peopleList: selectedPeople,
                     peopleCount: selectedPeople.length 
                 };
@@ -353,6 +411,7 @@
         } else {
             const entry = { 
                 id: Date.now(), 
+                createdAt: Date.now(),
                 name, curName, rawAmount, hkdTotal, payer, 
                 peopleList: selectedPeople,
                 peopleCount: selectedPeople.length 
@@ -433,32 +492,80 @@
         }
     }
 
+    function getFilteredExpenses() {
+        const keyword = document.getElementById('search-keyword').value.trim().toLowerCase();
+        const payerFilter = document.getElementById('filter-payer').value;
+        const sortMode = document.getElementById('sort-mode').value;
+
+        let result = expenses.filter(item => {
+            const searchable = `${item.name} ${item.payer} ${item.peopleList.join(' ')}`.toLowerCase();
+            const matchesKeyword = !keyword || searchable.includes(keyword);
+            const matchesPayer = !payerFilter || item.payer === payerFilter;
+            return matchesKeyword && matchesPayer;
+        });
+
+        if (sortMode === 'amount_desc') {
+            result.sort((a, b) => b.hkdTotal - a.hkdTotal);
+        } else if (sortMode === 'amount_asc') {
+            result.sort((a, b) => a.hkdTotal - b.hkdTotal);
+        } else {
+            result.sort((a, b) => (b.createdAt || b.id) - (a.createdAt || a.id));
+        }
+
+        return result;
+    }
+
+    function renderStats(filteredExpenses) {
+        const panel = document.getElementById('stats-panel');
+        const filteredTotal = filteredExpenses.reduce((sum, i) => sum + i.hkdTotal, 0);
+        const avg = filteredExpenses.length ? (filteredTotal / filteredExpenses.length).toFixed(1) : '0.0';
+        panel.innerHTML = `
+            <div class="stat-card"><div class="k">目前篩選筆數</div><div class="v">${filteredExpenses.length} 筆</div></div>
+            <div class="stat-card"><div class="k">目前篩選總額</div><div class="v">HK$ ${filteredTotal.toFixed(1)}</div></div>
+            <div class="stat-card"><div class="k">平均每筆</div><div class="v">HK$ ${avg}</div></div>
+            <div class="stat-card"><div class="k">全部總筆數</div><div class="v">${expenses.length} 筆</div></div>
+        `;
+    }
+
     function renderExpenses() {
         const list = document.getElementById('expense-list');
         list.innerHTML = '';
-        let totalHKD = 0;
 
         if (expenses.length === 0) {
+            renderStats([]);
             list.innerHTML = `<div class="empty-state">目前尚未有消費記錄，請先在上方新增第一筆 ✍️</div>`;
             document.getElementById('total-sum').innerText = "0.0";
             updateOverview();
             return;
         }
-        
-        [...expenses].reverse().forEach(item => {
-            totalHKD += item.hkdTotal;
+
+        const filteredExpenses = getFilteredExpenses();
+        renderStats(filteredExpenses);
+
+        if (filteredExpenses.length === 0) {
+            list.innerHTML = `<div class="empty-state">找不到符合篩選條件的記錄 🔍</div>`;
+            const overallTotal = expenses.reduce((sum, i) => sum + i.hkdTotal, 0);
+            document.getElementById('total-sum').innerText = overallTotal.toFixed(1);
+            updateOverview();
+            return;
+        }
+
+        let displayTotal = 0;
+        filteredExpenses.forEach(item => {
+            displayTotal += item.hkdTotal;
             const perPerson = (item.hkdTotal / item.peopleCount).toFixed(1);
             const peopleStr = escapeHTML(item.peopleList.join(', '));
             const safePayer = escapeHTML(item.payer);
             const safeName = escapeHTML(item.name);
             const safeCurName = escapeHTML(item.curName);
+            const dateStr = new Date(item.createdAt || item.id).toLocaleDateString('zh-HK');
 
             list.innerHTML += `
                 <div class="item">
                     <div style="flex:1;">
                         <div class="payer-badge">💳 ${safePayer} 先付</div>
                         <div class="item-name" style="font-weight:bold; color:#333;">${safeName}</div>
-                        <small style="color:#777;">${item.rawAmount} ${safeCurName}</small>
+                        <small style="color:#777;">${item.rawAmount} ${safeCurName} ｜ ${dateStr}</small>
                         <div class="people-list">🙋‍♂️ 分攤: ${peopleStr}</div>
                     </div>
                     <div style="text-align:right">
@@ -472,10 +579,11 @@
                 </div>
             `;
         });
-        
-        document.getElementById('total-sum').innerText = totalHKD.toFixed(1);
+
+        document.getElementById('total-sum').innerText = displayTotal.toFixed(1);
         updateOverview();
     }
+
 
     function showSettlement() {
         if (expenses.length === 0) {
