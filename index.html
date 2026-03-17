@@ -515,16 +515,68 @@
         return result;
     }
 
+    function createStatCard(label, value) {
+        return `<div class="stat-card"><div class="k">${label}</div><div class="v">${value}</div></div>`;
+    }
+
     function renderStats(filteredExpenses) {
         const panel = document.getElementById('stats-panel');
         const filteredTotal = filteredExpenses.reduce((sum, i) => sum + i.hkdTotal, 0);
         const avg = filteredExpenses.length ? (filteredTotal / filteredExpenses.length).toFixed(1) : '0.0';
-        panel.innerHTML = `
-            <div class="stat-card"><div class="k">目前篩選筆數</div><div class="v">${filteredExpenses.length} 筆</div></div>
-            <div class="stat-card"><div class="k">目前篩選總額</div><div class="v">HK$ ${filteredTotal.toFixed(1)}</div></div>
-            <div class="stat-card"><div class="k">平均每筆</div><div class="v">HK$ ${avg}</div></div>
-            <div class="stat-card"><div class="k">全部總筆數</div><div class="v">${expenses.length} 筆</div></div>
+        panel.innerHTML = [
+            createStatCard('目前篩選筆數', `${filteredExpenses.length} 筆`),
+            createStatCard('目前篩選總額', `HK$ ${filteredTotal.toFixed(1)}`),
+            createStatCard('平均每筆', `HK$ ${avg}`),
+            createStatCard('全部總筆數', `${expenses.length} 筆`)
+        ].join('');
+    }
+
+    function createExpenseItemElement(item) {
+        const perPerson = (item.hkdTotal / item.peopleCount).toFixed(1);
+        const peopleStr = escapeHTML(item.peopleList.join(', '));
+        const safePayer = escapeHTML(item.payer);
+        const safeName = escapeHTML(item.name);
+        const safeCurName = escapeHTML(item.curName);
+        const dateStr = new Date(item.createdAt || item.id).toLocaleDateString('zh-HK');
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'item';
+        wrapper.innerHTML = `
+            <div style="flex:1;">
+                <div class="payer-badge">💳 ${safePayer} 先付</div>
+                <div class="item-name" style="font-weight:bold; color:#333;">${safeName}</div>
+                <small style="color:#777;">${item.rawAmount} ${safeCurName} ｜ ${dateStr}</small>
+                <div class="people-list">🙋‍♂️ 分攤: ${peopleStr}</div>
+            </div>
+            <div style="text-align:right">
+                <span class="hkd-amount">HK$ ${item.hkdTotal}</span><br>
+                <small>每人 HK$ ${perPerson}</small>
+            </div>
         `;
+
+        const actions = document.createElement('div');
+        actions.className = 'item-actions';
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-btn';
+        editBtn.textContent = '✏️';
+        editBtn.addEventListener('click', () => editItem(item.id));
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'delete-btn';
+        deleteBtn.textContent = '✖️';
+        deleteBtn.addEventListener('click', () => deleteItem(item.id));
+
+        actions.appendChild(editBtn);
+        actions.appendChild(deleteBtn);
+        wrapper.appendChild(actions);
+
+        return wrapper;
+    }
+
+    function renderEmptyExpenseState(message) {
+        const list = document.getElementById('expense-list');
+        list.innerHTML = `<div class="empty-state">${message}</div>`;
     }
 
     function renderExpenses() {
@@ -533,8 +585,8 @@
 
         if (expenses.length === 0) {
             renderStats([]);
-            list.innerHTML = `<div class="empty-state">目前尚未有消費記錄，請先在上方新增第一筆 ✍️</div>`;
-            document.getElementById('total-sum').innerText = "0.0";
+            renderEmptyExpenseState('目前尚未有消費記錄，請先在上方新增第一筆 ✍️');
+            document.getElementById('total-sum').innerText = '0.0';
             updateOverview();
             return;
         }
@@ -543,7 +595,7 @@
         renderStats(filteredExpenses);
 
         if (filteredExpenses.length === 0) {
-            list.innerHTML = `<div class="empty-state">找不到符合篩選條件的記錄 🔍</div>`;
+            renderEmptyExpenseState('找不到符合篩選條件的記錄 🔍');
             const overallTotal = expenses.reduce((sum, i) => sum + i.hkdTotal, 0);
             document.getElementById('total-sum').innerText = overallTotal.toFixed(1);
             updateOverview();
@@ -553,31 +605,7 @@
         let displayTotal = 0;
         filteredExpenses.forEach(item => {
             displayTotal += item.hkdTotal;
-            const perPerson = (item.hkdTotal / item.peopleCount).toFixed(1);
-            const peopleStr = escapeHTML(item.peopleList.join(', '));
-            const safePayer = escapeHTML(item.payer);
-            const safeName = escapeHTML(item.name);
-            const safeCurName = escapeHTML(item.curName);
-            const dateStr = new Date(item.createdAt || item.id).toLocaleDateString('zh-HK');
-
-            list.innerHTML += `
-                <div class="item">
-                    <div style="flex:1;">
-                        <div class="payer-badge">💳 ${safePayer} 先付</div>
-                        <div class="item-name" style="font-weight:bold; color:#333;">${safeName}</div>
-                        <small style="color:#777;">${item.rawAmount} ${safeCurName} ｜ ${dateStr}</small>
-                        <div class="people-list">🙋‍♂️ 分攤: ${peopleStr}</div>
-                    </div>
-                    <div style="text-align:right">
-                        <span class="hkd-amount">HK$ ${item.hkdTotal}</span><br>
-                        <small>每人 HK$ ${perPerson}</small>
-                    </div>
-                    <div class="item-actions">
-                        <button class="edit-btn" onclick="editItem(${item.id})">✏️</button>
-                        <button class="delete-btn" onclick="deleteItem(${item.id})">✖️</button>
-                    </div>
-                </div>
-            `;
+            list.appendChild(createExpenseItemElement(item));
         });
 
         document.getElementById('total-sum').innerText = displayTotal.toFixed(1);
@@ -659,27 +687,38 @@
             resultsContainer.innerHTML = "<p style='text-align:center; color:#27ae60; font-weight:bold; padding:20px;'>🎉 完美！大家互不相欠！</p>";
         } else {
             for (let debtor in finalDebts) {
-                let debtList = finalDebts[debtor];
-                const safeDebtor = escapeHTML(debtor);
-                let cardHtml = `<div class="debtor-card">
-                    <div class="debtor-name">👤 ${safeDebtor} 需要支付：</div>`;
-                
+                const debtList = finalDebts[debtor];
+                const card = document.createElement('div');
+                card.className = 'debtor-card';
+
+                const debtorName = document.createElement('div');
+                debtorName.className = 'debtor-name';
+                debtorName.textContent = `👤 ${debtor} 需要支付：`;
+                card.appendChild(debtorName);
+
                 debtList.forEach(d => {
-                    const safeCreditor = escapeHTML(d.creditor);
-                    const safeReasons = escapeHTML(d.reasons || '雜項');
-                    cardHtml += `
-                        <div class="debt-row">
-                            <div class="creditor-info">
-                                ➡️ 給 ${safeCreditor}
-                                <span class="debt-reason">(${safeReasons})</span>
-                            </div>
-                            <div class="debt-amount">HK$ ${d.amount.toFixed(1)}</div>
-                        </div>
-                    `;
+                    const row = document.createElement('div');
+                    row.className = 'debt-row';
+
+                    const creditorInfo = document.createElement('div');
+                    creditorInfo.className = 'creditor-info';
+                    creditorInfo.textContent = `➡️ 給 ${d.creditor}`;
+
+                    const reason = document.createElement('span');
+                    reason.className = 'debt-reason';
+                    reason.textContent = `(${d.reasons || '雜項'})`;
+                    creditorInfo.appendChild(reason);
+
+                    const amount = document.createElement('div');
+                    amount.className = 'debt-amount';
+                    amount.textContent = `HK$ ${d.amount.toFixed(1)}`;
+
+                    row.appendChild(creditorInfo);
+                    row.appendChild(amount);
+                    card.appendChild(row);
                 });
-                
-                cardHtml += `</div>`;
-                resultsContainer.innerHTML += cardHtml;
+
+                resultsContainer.appendChild(card);
             }
         }
 
